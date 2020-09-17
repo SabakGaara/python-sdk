@@ -1,0 +1,30 @@
+#!/bin/bash
+
+((num=0xb231ee30f68db033bb876c57452ef55c2da1e53b))
+zero=0
+
+for((integer=1; integer<=10; integer++))
+do
+{
+	#temp2=$((16#${num}+integer))
+	#let m=$num+integer;
+	#echo $m
+./console.py sendtx ExchangeV8 0x4de34c6f34f25cf14b076363913b8d47a6aa3f2c fillOrder 0x7465737400000000000000000000000000000000000000000000000000000000 0x692a70D2e424a56D2C6C27aA97D1a86395877b3A 0x95198b93705e394a916579e048c8a32ddfb900f7 [0x95198b93705e394a916579e048c8a32ddfb900f7,0x0000000000000000000000000000000000000000,0xb7e9e6b5a8e704123bbbe6dc5dcbcd4aef00440b,0xf888f6f48df91c8a1f9f0cc85bf5c0c4e111c5b4,0xc192453777f1209312eb550ac53c0e7ab4cb43a9] [10000,10000,0,0,17528848429058,0] 1 false 1 0x7465737400000000000000000000000000000000000000000000000000000000 0x7465737400000000000000000000000000000000000000000000000000000000
+
+}&
+done
+
+#for((integer=1; integer<=4; integer++))
+#do
+#{
+#        condition=`expr $integer % 2`
+#        if [ "$condition" == 0 ]
+#
+#        then
+#                ./console.py sendtx Paras 0xb231ee30f68db033bb876c57452ef55c2da1e53b set "a" 20000
+#        else
+#                ./console.py sendtx Paras 0xb231ee30f68db033bb876c57452ef55c2da1e53b transfer "a" "b" 2
+#
+#        fi
+#}&
+#done

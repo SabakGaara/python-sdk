@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-  FISCO BCOS/Python-SDK is a python client for FISCO BCOS2.0 (https://github.com/FISCO-BCOS/)
-  FISCO BCOS/Python-SDK is free software: you can redistribute it and/or modify it under the
+  bcosliteclientpy is a python client for FISCO BCOS2.0 (https://github.com/FISCO-BCOS/)
+  bcosliteclientpy is free software: you can redistribute it and/or modify it under the
   terms of the MIT License as published by the Free Software Foundation. This project is
   distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
   the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. Thanks for
@@ -214,8 +214,7 @@ class Precompile:
         """
         print cns information
         """
-        if common.check_result(cns_info) is False:
-            return
+        # common.print_result(cns_info)
         for cns_item in cns_info:
             cns_obj = json.loads(cns_item)
             i = 0

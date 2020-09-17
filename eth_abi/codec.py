@@ -33,7 +33,6 @@ class BaseABICoder:
     instances of :class:`~eth_abi.registry.ABIRegistry` to provide last-mile
     coding functionality.
     """
-
     def __init__(self, registry: ABIRegistry):
         """
         Constructor.
@@ -48,7 +47,6 @@ class ABIEncoder(BaseABICoder):
     """
     Wraps a registry to provide last-mile encoding functionality.
     """
-
     def encode_single(self, typ: TypeStr, arg: Any) -> bytes:
         """
         Encodes the python value ``arg`` as a binary value of the ABI type
@@ -134,7 +132,6 @@ class ABIDecoder(BaseABICoder):
     """
     Wraps a registry to provide last-mile decoding functionality.
     """
-
     def decode_single(self, typ: TypeStr, data: Decodable) -> Any:
         """
         Decodes the binary value ``data`` of the ABI type ``typ`` into its

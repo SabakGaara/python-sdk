@@ -191,7 +191,7 @@ class Predicate:
 
     def __eq__(self, other):
         return (
-            isinstance(self, type(other))
+            type(self) is type(other)
             and tuple(self) == tuple(other))
 
 

@@ -484,6 +484,8 @@ class Account(object):
             'signature': HexBytes(eth_signature_bytes),
         })
 
+
+
     @combomethod
     def sign_transaction(self, transaction_dict, private_key):
         """

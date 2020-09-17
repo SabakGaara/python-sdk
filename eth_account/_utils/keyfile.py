@@ -2,10 +2,10 @@ import hashlib
 import hmac
 import json
 import uuid
-import os
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
+from Crypto import Random
+from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import scrypt
+from Crypto.Util import Counter
 
 from eth_keys import keys
 
@@ -37,7 +37,8 @@ def load_keyfile(path_or_file_obj):
 def create_keyfile_json(private_key, password, version=3, kdf="pbkdf2", iterations=None):
     if version == 3:
         return _create_v3_keyfile_json(private_key, password, kdf, iterations)
-    raise NotImplementedError("Not yet implemented")
+    else:
+        raise NotImplementedError("Not yet implemented")
 
 
 def decode_keyfile_json(raw_keyfile_json, password):
@@ -46,7 +47,8 @@ def decode_keyfile_json(raw_keyfile_json, password):
 
     if version == 3:
         return _decode_keyfile_json_v3(keyfile_json, password)
-    raise NotImplementedError("Not yet implemented")
+    else:
+        raise NotImplementedError("Not yet implemented")
 
 
 def extract_key_from_keyfile(path_or_file_obj, password):
@@ -80,7 +82,8 @@ SCRYPT_P = 8
 
 
 def _create_v3_keyfile_json(private_key, password, kdf, work_factor=None):
-    salt = os.urandom(16)
+    salt = Random.get_random_bytes(16)
+
     if work_factor is None:
         work_factor = get_default_work_factor_for_kdf(kdf)
 
@@ -117,10 +120,9 @@ def _create_v3_keyfile_json(private_key, password, kdf, work_factor=None):
     else:
         raise NotImplementedError("KDF not implemented: {0}".format(kdf))
 
-    ivbytes = os.urandom(16)
-    iv = big_endian_to_int(ivbytes)
+    iv = big_endian_to_int(Random.get_random_bytes(16))
     encrypt_key = derived_key[:16]
-    ciphertext = encrypt_aes_ctr(private_key, encrypt_key, ivbytes)
+    ciphertext = encrypt_aes_ctr(private_key, encrypt_key, iv)
     mac = keccak(derived_key[16:32] + ciphertext)
 
     address = keys.PrivateKey(private_key).public_key.to_address()
@@ -171,15 +173,16 @@ def _decode_keyfile_json_v3(keyfile_json, password):
     # private key.
     encrypt_key = derived_key[:16]
     cipherparams = crypto['cipherparams']
-    ivBytes = decode_hex(cipherparams['iv'])
-    private_key = decrypt_aes_ctr(ciphertext, encrypt_key, ivBytes)
+    iv = big_endian_to_int(decode_hex(cipherparams['iv']))
+
+    private_key = decrypt_aes_ctr(ciphertext, encrypt_key, iv)
+
     return private_key
+
 
 #
 # Key derivation
 #
-
-
 def _derive_pbkdf_key(crypto, password):
     kdf_params = crypto['kdfparams']
     salt = decode_hex(kdf_params['salt'])
@@ -241,24 +244,21 @@ def _pbkdf2_hash(password, hash_name, salt, iterations, dklen):
 # Encryption and Decryption
 #
 def decrypt_aes_ctr(ciphertext, key, iv):
-    cipher = Cipher(algorithms.AES(key), modes.CTR(iv), default_backend())
-    decryptor = cipher.decryptor()
-    plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-    return plaintext
+    ctr = Counter.new(128, initial_value=iv, allow_wraparound=True)
+    encryptor = AES.new(key, AES.MODE_CTR, counter=ctr)
+    return encryptor.decrypt(ciphertext)
 
 
 def encrypt_aes_ctr(value, key, iv):
-    cipher = Cipher(algorithms.AES(key), modes.CTR(iv), default_backend())
-    encryptor = cipher.encryptor()
-    ciphertext = encryptor.update(value)
-    ciphertext += encryptor.finalize()
+    ctr = Counter.new(128, initial_value=iv, allow_wraparound=True)
+    encryptor = AES.new(key, AES.MODE_CTR, counter=ctr)
+    ciphertext = encryptor.encrypt(value)
     return ciphertext
+
 
 #
 # Utility
 #
-
-
 def get_default_work_factor_for_kdf(kdf):
     if kdf == 'pbkdf2':
         return 1000000

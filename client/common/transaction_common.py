@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-FISCO BCOS/Python-SDK is free software: you can redistribute it and/or modify it under the
- is a python client for FISCO BCOS2.0 (https://github.com/FISCO-BCOS/)
-FISCO BCOS/Python-SDK is free software: you can redistribute it and/or modify it under the
- is free software: you can redistribute it and/or modify it under the
+  bcosliteclientpy is a python client for FISCO BCOS2.0 (https://github.com/FISCO-BCOS/)
+  bcosliteclientpy is free software: you can redistribute it and/or modify it under the
   terms of the MIT License as published by the Free Software Foundation. This project is
   distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
   the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. Thanks for
@@ -122,14 +120,20 @@ class TransactionCommon(bcosclient.BcosClient):
         try:
             paramformatted = []
             index = -1
+            #print (len(inputparams))
+            #print (len(inputabi))
             if len(inputparams) != len(inputabi):
                 raise ArgumentsError(("Invalid Arguments {}, expected params size: {},"
                                       " inputted params size: {}".format(inputparams,
                                                                          len(inputabi),
                                                                          len(inputparams))))
             for input_item in inputabi:
+                
                 index += 1
                 param = inputparams[index]
+                #print("hehehhe")
+                #print(input_item["type"])
+                #print(param)
                 if param is None:
                     continue
                 if isinstance(param, Iterable) is False:
@@ -137,29 +141,122 @@ class TransactionCommon(bcosclient.BcosClient):
                     continue
                 if '\'' in param:
                     param = param.replace('\'', "")
-                if "int" in input_item["type"] or "int256" in input_item["type"]:
+                if "uint[" in input_item["type"] or "uint256[" in input_item["type"]:
+                    #print('lenth')
+                    b = ""
+                    new_list = []
+                    for item_1 in range(len(param)):
+                        if param[item_1] == "," or param[item_1] == "]":
+                            new_list.append(int(b, 10))
+                            b = ""
+                        elif param[item_1].isdigit():
+                            b = b + param[item_1]
+                    #        new_list.append(int(item, 10))
+                    paramformatted.append(new_list)
+                    #print(new_list)
+                    #print ("error_2?")
+                    continue
+                if "bool" in input_item["type"]:
+                    paramformatted.append(True)
+                    continue
+                if "address[" in input_item["type"]:
+                    new_list = []
+                    #print (param)
+                    first_index = 0
+                    second_index = 0
+                    flag = 0
+                    a  = ""
+                    for item in range(len(param)):
+                        #print(param[item])
+                        if param[item] == "," or param[item] == "]":
+                    #        print("i am here \n ")
+                    #        print(a)
+                            new_list.append(to_checksum_address(a))
+                            a = ""
+                            #print("hhhhhhhhh")
+                            #print(new_list)
+                            flag = 0
+                    #       continue
+                        if param[item]=="0" and (param[item+1] == "x"):
+                            flag = 1
+                        if flag == 1:
+                           a = a + param[item]
+                        #if index % 2 != 0:
+                        #   print("address info \n")
+                        #   print(param[index])
+                         #   new_list.append(param[index])
+                    paramformatted.append(new_list)
+                    #print ("error?")
+                    continue
+                if ("uint" in input_item["type"] or "uint256" in input_item["type"]) and not ("[" in input_item["type"]):
+                    #print("uintaaaa")
+                    #print(param[0])
                     paramformatted.append(int(param, 10))
                     continue
-                if "address" in input_item["type"]:
+                if "address" in input_item["type"] and not "[" in input_item["type"]:
                     try:
+                        #print("address info")
+                        #print(type(param))
+
                         paramformatted.append(to_checksum_address(param))
                     except ArgumentsError as e:
                         raise ArgumentsError(("ERROR >> covert {} to to_checksum_address failed,"
                                               " exception: {}").format(param, e))
                     continue
-                if "bytes" in input_item["type"]:
-                    try:
-                        paramformatted.append(bytes(param, "utf-8"))
-                    except Exception as e:
-                        raise ArgumentsError(
-                            "ERROR >> parse {} to bytes failed, error info: {}".format(param, e))
-                    continue
                 paramformatted.append(param)
+
+            #print(paramformatted)
             return paramformatted
         except Exception as e:
             raise BcosException(("inputparams illegal params: {},"
                                  "error info: {}").format(inputparams, e))
 
+    def send_transaction_getReceipt_v2(self, fn_name, fn_args, fn_value, gasPrice=30000000, deploy=False):
+        """
+        send transactions to CNS contract with the givn function name and args
+        """
+        try:
+            contract_abi, args = self.format_args(fn_name, fn_args, deploy)
+            contract_bin = None
+            if deploy is True and os.path.exists(self.contract_bin_path) is True:
+                with open(self.contract_bin_path) as f:
+                    contract_bin = f.read()
+                if contract_bin is not None and len(contract_bin) > 0x40000:
+                    raise BcosException(("contract bin size overflow,"
+                                         " limit: 0x40000(256K), size: {})")
+                                        .format(len(contract_bin), 16))
+            receipt = super().sendRawTransactionGetReceipt(self.contract_addr,
+                                                           contract_abi, fn_name,
+                                                           args, contract_bin, gasPrice, fn_value)
+            # check status
+            if "status" not in receipt.keys() or \
+                    "output" not in receipt.keys():
+                raise BcosError(-1, None,
+                                ("send transaction failed"
+                                 "for empty status and output,"
+                                 "transaction receipt:{}").format(receipt))
+            status = receipt["status"]
+            if int(status, 16) != 0 or receipt["output"] is None:
+                raise TransactionException(receipt, ("send transaction failed,"
+                                                     "status: {}, gasUsed: {},"
+                                                     " (not enough gas?)"
+                                                     " (non-exist contract address?)").
+                                           format(status,
+                                                  receipt["gasUsed"]))
+            if fn_name is not None and fn_args is not None:
+                output = common.parse_output(receipt["output"], fn_name, contract_abi, args)
+            else:
+                output = None
+            return (receipt, output)
+        except BcosError as e:
+            self.logger.error("send transaction failed, fn_name: {}, fn_args:{}, error_info:{}".
+                              format(fn_name, fn_args, e))
+            raise e
+        except CompileError as e:
+            self.logger.error(("send transaction failed for compile soldity failed,"
+                               "contract_path {}, error_info:{}").
+                              format(self.sol_path, e))
+            raise e
     def format_args(self, fn_name, fn_args, needCover=False):
         """
         format args
